@@ -16,6 +16,11 @@ lihaoze123 的独立 NUR 软件包仓库。软件包配方集中维护，安装�
 | `honk` | 带原生 API 和内嵌 doona 的固定预编译版本 |
 | `try` | tobi/try，修复 NixOS Ruby shebang |
 | `vscode` | VS Code，包含原有六个扩展 |
+| `dms-xhup` | DMS 小鹤音形插件 |
+| `edunet` | 校园网 ePortal CLI |
+| `codex-desktop`、`codex-computer-use`、`codex-computer-use-niri`、`niri-patched` | niri 上的 Codex Computer Use，保留已有缓存所用的版本与依赖 |
+| `gxfp5130-fprintd`、`gxfp5130-libfprint`、`gxfp5130-tools` | GXFP5130 ChicagoHS 指纹支持 |
+| `nur-install`、`nur-with-caches` | 按需选择项目缓存的安装与命令入口 |
 
 目前 Flake 输出支持 `x86_64-linux`。`vscode` 包含非自由软件；Flake 入口已允许，
 通过传统 NUR 入口使用时由调用者设置 `config.allowUnfree`。
@@ -44,6 +49,39 @@ DBX 的构建仅解包官方二进制并生成 Nix 启动环境，不编译 DBX 
 VType 从源码构建插件和 Android 宿主程序；引擎、词库、设备身份另存于用户目录，
 安装和更新 Nix 包不会自动初始化、关联设备或重启输入法。
 VType 的初始化与运行说明见 [pkgs/vtype-linux/README.md](pkgs/vtype-linux/README.md)。
+
+## 按需使用缓存
+
+默认 Nix 配置只查询官方缓存和清华镜像。缓存的信任列表与查询列表分开维护：
+`trusted-substituters` 和公钥允许使用指定缓存，不会主动查询它们。
+项目缓存只在相关命令内启用；Nix 没有按单个 derivation 自动选择缓存的机制。
+
+```sh
+# 自动选择这个包适用的公开项目缓存
+nix run github:lihaoze123/nur-packages#install -- codex-desktop
+
+# 在配置了私有 R2 凭据的个人设备上，同时使用 NUR 缓存
+nix run github:lihaoze123/nur-packages#install -- --private dbx edunet
+
+# 对已安装的包升级，缓存只用于此命令
+nix run github:lihaoze123/nur-packages#with-caches -- nur nix profile upgrade dbx
+
+# 查看将使用的缓存，不执行构建
+nix run github:lihaoze123/nur-packages#with-caches -- computer-use --print-config
+```
+
+缓存组：`computer-use`（Niri 和 Codex）、`speech`（VoCoType）、`kernel`
+（CachyOS）、`nur`（现有私有 R2）、`system`（系统构建所需的这些缓存）。
+可用逗号组合，例如 `nur,computer-use`。普通 `nix profile` 命令不会自动加上它们。
+
+NUR 缓存复用已有私有 R2 桶和签名密钥。仓库公开，缓存仍需要个人设备的 R2
+凭据。CI 对三个渠道执行求值检查；实际构建、签名、上传的是 `flake.lock`
+对应的 `ci-pinned.nix.buildOutputs`，包含原模板因 `preferLocalBuild` 排除的
+本仓库封装。`cache-r2.sh` 先上传 NAR 数据，再上传签名索引，最后校验本批文件。
+CI 不会自动公开私有桶、清理旧对象或缓存非自由包作为独立构建目标。
+
+凭据仅存于 GitHub Secrets：`R2_CACHE_CREDENTIALS`、`NIX_CACHE_SIGNING_KEY`；
+地址存于仓库变量 `R2_CACHE_STORE`。
 
 ## NUR、Flake 和 overlay
 
@@ -81,7 +119,7 @@ Overlay 将软件包放在 `pkgs.nur-lihaoze123` 中，不覆盖 nixpkgs 同名�
 
 适配项：当前包只支持 x86_64 Linux；Flake 允许 VS Code 的非自由许可证；
 nixpkgs 沿用迁移前的锁定版本；overlay 使用独立命名空间，避免覆盖 nixpkgs 中的
-`try`、`vscode` 等同名包。模板示例包已由六个实际包替代。
+`try`、`vscode` 等同名包。模板示例包已由实际软件包替代。
 
 ## 维护
 
@@ -89,9 +127,9 @@ nixpkgs 沿用迁移前的锁定版本；overlay 使用独立命名空间，避�
 `flake.lock` 固定 nixpkgs，保持运行依赖可复现；需要更新时执行 `nix flake update nixpkgs`。
 沿用模板的 `ci.nix`，分别导出 `buildPkgs`、`cachePkgs`、`buildOutputs`、
 `cacheOutputs`；过滤 broken、非自由及 `preferLocalBuild` 软件包。
-GitHub Actions 检查 Flake 与 NUR 受限求值，并在三个 nixpkgs 分支上构建
-`cacheOutputs`。每日 03:17 UTC 定时运行，Dependabot 每周检查 Actions 和 Nix 更新。
-设置仓库变量 `CACHIX_NAME` 和对应 secret 后启用 Cachix 上传；进入 NUR 公共索引后，
+GitHub Actions 在三个 nixpkgs 分支上检查 Flake 与 NUR 受限求值，另对锁定版本
+构建 `buildOutputs` 并上传 R2。每日 03:17 UTC 定时运行，Dependabot 每周检查 Actions 和 Nix 更新。
+项目公开 Cachix 缓存用于相关构建的下载；进入 NUR 公共索引后，
 将 `NUR_REGISTERED` 设为 `true`，成功的 push 工作流会通知 NUR 更新。
 回归脚本在 `tests/vtype-linux/`，仅在相关代码发生变化时运行。
 

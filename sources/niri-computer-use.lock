@@ -1,0 +1,134 @@
+{
+  "nodes": {
+    "codex-desktop-current": {
+      "inputs": {
+        "flake-utils": "flake-utils_3",
+        "nixpkgs": "nixpkgs_4"
+      },
+      "locked": {
+        "lastModified": 1791636176,
+        "narHash": "sha256-i5En3yRYX2UuqJqSVqOT5h+2Q9knqwmQx25oggpMrNg=",
+        "owner": "ilysenko",
+        "repo": "codex-desktop-linux",
+        "rev": "839dbb50fbd2ad041089981441a82f2460dac455",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ilysenko",
+        "repo": "codex-desktop-linux",
+        "type": "github"
+      }
+    },
+    "codex-desktop-linux": {
+      "inputs": {
+        "flake-utils": "flake-utils_3",
+        "nixpkgs": "nixpkgs_4"
+      },
+      "locked": {
+        "lastModified": 1790123554,
+        "narHash": "sha256-D7eMV+9sYfANE41vIEb/ASWup8udX7sC4jwg1rV2vN0=",
+        "owner": "ilysenko",
+        "repo": "codex-desktop-linux",
+        "rev": "9fb575b70b5ecdff51a0c534a5cbd231288e1058",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ilysenko",
+        "repo": "codex-desktop-linux",
+        "type": "github"
+      }
+    },
+    "flake-utils_3": {
+      "inputs": {
+        "systems": "systems_4"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "niri-src": {
+      "flake": false,
+      "inputs": {},
+      "locked": {
+        "lastModified": 1791889142,
+        "narHash": "sha256-btWAVpdpl/43Jms3c+xaNF4EOS0pvTMkVE3jPdzLrhU=",
+        "owner": "niri-wm",
+        "repo": "niri",
+        "rev": "4263c9a17f80fc8019bd474f85b1cc1dcbac785c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "niri-wm",
+        "repo": "niri",
+        "type": "github"
+      }
+    },
+    "nixpkgs_4": {
+      "inputs": {},
+      "locked": {
+        "lastModified": 1772773019,
+        "narHash": "sha256-E1bxHxNKfDoQUuvriG71+f+s/NT0qWkImXsYZNFFfCs=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "aca4d95fce4914b3892661bcb80b8087293536c6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_5": {
+      "inputs": {},
+      "locked": {
+        "lastModified": 1791260994,
+        "narHash": "sha256-MFBjw66d4h06MvpW6lIl7RwarLteD0sk859CncGwb1Q=",
+        "rev": "151fa4e8ddfdd8dd25d945ad94ed54a13de9f6e4",
+        "type": "tarball",
+        "url": "https://releases.nixos.org/nixos/unstable/nixos-26.11pre1086391.151fa4e8ddfd/nixexprs.tar.zst"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://channels.nixos.org/nixos-unstable/nixexprs.tar.zst"
+      }
+    },
+    "root": {
+      "inputs": {
+        "codex-desktop-current": "codex-desktop-current",
+        "codex-desktop-linux": "codex-desktop-linux",
+        "niri-src": "niri-src",
+        "nixpkgs": "nixpkgs_5"
+      }
+    },
+    "systems_4": {
+      "inputs": {},
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

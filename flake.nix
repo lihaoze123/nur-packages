@@ -16,6 +16,11 @@
         self.legacyPackages.${system});
       nixosModules = import ./nixos-modules;
       overlays = import ./overlays;
+      lib.cacheConfig = import ./lib/cache-config.nix;
+      apps = forAllSystems (system: {
+        install = { type = "app"; program = "${self.packages.${system}.nur-install}/bin/nur-install"; meta.description = "Install NUR packages with the applicable project caches"; };
+        with-caches = { type = "app"; program = "${self.packages.${system}.nur-with-caches}/bin/nur-with-caches"; meta.description = "Run a Nix command with explicitly selected caches"; };
+      });
       formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixpkgs-fmt);
     };
 }
