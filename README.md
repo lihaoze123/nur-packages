@@ -76,7 +76,7 @@ nix run github:lihaoze123/nur-packages#with-caches -- computer-use --print-confi
 
 NUR 缓存复用已有私有 R2 桶和签名密钥。仓库公开，缓存仍需要个人设备的 R2
 凭据。CI 对三个渠道执行求值检查；实际构建、签名、上传的是 `flake.lock`
-对应的 `ci-pinned.nix.buildOutputs`，包含原模板因 `preferLocalBuild` 排除的
+对应的 `ci-pinned.nix.buildOutputs`；在源码 IFD 实现后检查完整 Flake，包含原模板因 `preferLocalBuild` 排除的
 本仓库封装。`cache-r2.sh` 先上传 NAR 数据，再上传签名索引，最后校验本批文件。
 CI 不会自动公开私有桶、清理旧对象或缓存非自由包作为独立构建目标。
 
@@ -130,7 +130,7 @@ nixpkgs 沿用迁移前的锁定版本；overlay 使用独立命名空间，避�
 `flake.lock` 固定 nixpkgs，保持运行依赖可复现；需要更新时执行 `nix flake update nixpkgs`。
 沿用模板的 `ci.nix`，分别导出 `buildPkgs`、`cachePkgs`、`buildOutputs`、
 `cacheOutputs`；过滤 broken、非自由及 `preferLocalBuild` 软件包。
-GitHub Actions 在三个 nixpkgs 分支上检查 Flake 与 NUR 受限求值，另对锁定版本
+GitHub Actions 在三个 nixpkgs 分支上检查传统 NUR 受限求值，另对锁定版本
 构建 `buildOutputs` 并上传 R2。每日 03:17 UTC 定时运行，Dependabot 每周检查 Actions 和 Nix 更新。
 项目公开 Cachix 缓存用于相关构建的下载；进入 NUR 公共索引后，
 将 `NUR_REGISTERED` 设为 `true`，成功的 push 工作流会通知 NUR 更新。

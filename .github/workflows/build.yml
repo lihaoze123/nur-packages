@@ -51,8 +51,6 @@ jobs:
           --drv-path --show-trace \
           -I nixpkgs=$(nix-instantiate --find-file nixpkgs) \
           -I $PWD
-    - name: Check flake
-      run: nix flake check --no-build
     - name: Trigger NUR update
       # Enable NUR_REGISTERED after this repository enters the public index.
       if: ${{ github.event_name == 'push' && vars.NUR_REGISTERED == 'true' }}
@@ -86,6 +84,8 @@ jobs:
       run: |
         nix build --impure --file ci-pinned.nix buildOutputs --no-link --json > "$RUNNER_TEMP/nur-build.json"
         jq -r '.[].outputs[]' "$RUNNER_TEMP/nur-build.json" > "$RUNNER_TEMP/nur-paths"
+    - name: Check the complete flake after source IFD is materialized
+      run: nix flake check --no-build
     - name: Publish signed outputs to existing R2 cache
       env:
         R2_CACHE_CREDENTIALS: ${{ secrets.R2_CACHE_CREDENTIALS }}
