@@ -14,7 +14,8 @@
       packages = forAllSystems (system: nixpkgs.lib.filterAttrs
         (_: value: nixpkgs.lib.isDerivation value)
         self.legacyPackages.${system});
-      nixosModules = import ./nixos-modules;
+      # Resolve upstream module imports before NixOS computes its own pkgs.
+      nixosModules = self.legacyPackages.x86_64-linux.nixosModules;
       overlays = import ./overlays;
       lib.cacheConfig = import ./lib/cache-config.nix;
       apps = forAllSystems (system: {

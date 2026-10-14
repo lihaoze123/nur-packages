@@ -15,10 +15,14 @@ let
       inherit (info) url;
       hash = info.narHash;
       name = "source";
+      nativeBuildInputs = [ pkgs.zstd ];
     } else throw "Unsupported pinned flake source: ${info.type}";
   # Match fetchTree's source-path context, not a fetch derivation dependency.
   # The verified hash keeps this permitted in pure/restricted evaluation.
-  fetch = info: builtins.path { path = fetchDrv info; sha256 = info.narHash; name = "source"; };
+  fetch = info:
+    let fetched = fetchDrv info;
+    in builtins.seq (builtins.readDir fetched)
+      (builtins.path { path = fetched; sha256 = info.narHash; name = "source"; });
   resolve = ref:
     if builtins.isList ref then lib.foldl'
       (node: input: resolve lock.nodes.${node}.inputs.${input}) lock.root ref

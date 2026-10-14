@@ -6,7 +6,10 @@ let
     hash = specs.${name}.narHash;
     name = "source";
   };
-  source = name: builtins.path { path = sourceDrv name; sha256 = specs.${name}.narHash; name = "source"; };
+  source = name:
+    let fetched = sourceDrv name;
+    in builtins.seq (builtins.readDir fetched)
+      (builtins.path { path = fetched; sha256 = specs.${name}.narHash; name = "source"; });
   locked = name: import ./locked-flake.nix { inherit pkgs; } {
     src = source name;
     sourceInfo = specs.${name};

@@ -6,7 +6,7 @@ let
 in
 {
   lib = import ./lib { inherit pkgs; };
-  nixosModules = import ./nixos-modules;
+  nixosModules = import ./nixos-modules { inherit pkgs; };
   overlays = import ./overlays;
 
   dbx = pkgs.callPackage ./pkgs/dbx { };
