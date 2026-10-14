@@ -58,6 +58,9 @@ jobs:
 
   cache-pinned:
     if: github.event_name != 'pull_request'
+    concurrency:
+      group: nur-r2-cache
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
@@ -96,4 +99,4 @@ jobs:
           echo 'R2 cache credentials are not configured.' >&2
           exit 1
         fi
-        nix shell --inputs-from . nixpkgs#rclone -c bash scripts/cache-r2.sh "$RUNNER_TEMP/nur-paths"
+        nix shell --inputs-from . nixpkgs#rclone nixpkgs#jq -c bash scripts/cache-r2.sh "$RUNNER_TEMP/nur-paths"
