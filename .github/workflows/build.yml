@@ -35,7 +35,7 @@ jobs:
     - name: Show nixpkgs version
       run: nix-instantiate --eval -E '(import <nixpkgs> {}).lib.version'
     - name: Setup cachix
-      uses: cachix/cachix-action@v16
+      uses: cachix/cachix-action@v17
       # Optional: set CACHIX_NAME and a signing key/token to enable uploads.
       if: ${{ vars.CACHIX_NAME != '' }}
       with:
