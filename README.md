@@ -85,7 +85,10 @@ CI 不会自动公开私有桶、清理旧对象或缓存非自由包作为独�
 
 ## NUR、Flake 和 overlay
 
-`default.nix` 符合 NUR 接口，所有依赖取自调用者的 `pkgs`：
+`default.nix` 符合传统 NUR 接口，维护六个本地配方及缓存工具，所有依赖取自调用者的 `pkgs`。
+已有独立 Flake 的四个项目通过 `flake.nix` 的 `packages`/`legacyPackages` 聚合，
+并在 Flake 中提供对应 NixOS 模块；它们保持上游自己的配方和依赖锁，不加入
+传统 NUR 的查询集合，以避免查询阶段的远程源码 IFD。
 
 ```nix
 import ./default.nix { inherit pkgs; }
@@ -111,8 +114,8 @@ Overlay 将软件包放在 `pkgs.nur-lihaoze123` 中，不覆盖 nixpkgs 同名�
 
 ## 模板结构
 
-- `default.nix`：软件包以及 `lib`、`nixosModules`、`overlays` 入口。
-- `flake.nix`：按系统生成 `legacyPackages`，筛选 derivation 后生成 `packages`。
+- `default.nix`：本地配方以及模板预留的 `lib`、`nixosModules`、`overlays` 入口。
+- `flake.nix`：聚合已有项目、生成按系统的软件包集合，并提供上游模块。
 - `ci.nix`：模板提供的构建与缓存输出筛选。
 - `lib/`、`nixos-modules/`、`overlays/` 和 `overlay.nix`：模板的扩展入口。
 - `.github/workflows/build.yml`、`.github/dependabot.yml`：模板的 CI 与依赖维护配置。
