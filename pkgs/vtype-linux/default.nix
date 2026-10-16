@@ -1,18 +1,18 @@
 { lib, stdenv, fetchurl, cmake, fcitx5, pkgsStatic, python3, unzip, patchelf, zlib, openssl, snappy, writeShellScript, e2fsprogs, curl, fetchFromGitHub, applyPatches, callPackage }:
 
 let
-  # PR #4 的完整安装链路；保留小鹤双拼与云延迟补丁。
+  # 跟随上游正式合入的 Nix 支持；仅保留云候选短暂等待身份锁的补丁。
   wxc = callPackage ../wxc { };
   upstreamSrc = fetchFromGitHub {
-    owner = "lihaoze123";
+    owner = "zhl-HFUT";
     repo = "vtype-linux";
-    rev = "c2320aca40325f62a4a0eabec4c7f4b22190681d";
-    hash = "sha256-05d0oq6gQtrLoRNkNsyu9ymJp/vtu5ZZgbA5pXArE9s=";
+    rev = "03b011c359a354bd8a790e24ae6e1552ae788359";
+    hash = "sha256-s5oCuUin2OovdujD4eXeX1QEOQ+w234ObA9zGx5UxKg=";
   };
   src = applyPatches {
     name = "vtype-linux-source";
     src = upstreamSrc;
-    patches = [ ./double-pinyin.patch ./cloud-latency.patch ];
+    patches = [ ./cloud-latency.patch ];
   };
   python = python3.withPackages (ps: [ ps.cryptography ps.python-snappy ]);
   cloudPython = writeShellScript "wetype-cloud-python" ''
@@ -21,7 +21,7 @@ let
     export WETYPE_SNAPPY_LIBRARY="${lib.getLib snappy}/lib/libsnappy.so"
     exec ${python}/bin/python3 "$@"
   '';
-  version = "0-unstable-2026-10-13";
+  version = "0-unstable-2026-10-16";
   ndk = fetchurl {
     url = "https://dl.google.com/android/repository/android-ndk-r27c-linux.zip";
     hash = "sha256-WcL23JZ0O12vXRYmaEZAsgpr0rHYWxMVa5AzN0G61cw=";

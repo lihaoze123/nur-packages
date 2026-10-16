@@ -13,7 +13,7 @@ lihaoze123 的独立 NUR 软件包仓库。软件包配方集中维护，安装�
 | `cloudflare-cli` | Cloudflare 官方 `cf` / `cloudflare` CLI，使用 npm 发布包 |
 | `dbx` | DBX 官方预编译 AppImage，包含 NixOS 启动环境、菜单入口和图标 |
 | `fcitx5-vinput-lite`、`fcitx5-vinput-lite-upstream` | 云端语音输入插件；前者含按键重复修复及回归测试，后者保留原版 |
-| `vtype-linux` | 微信拼音 Fcitx5 插件，含小鹤双拼、云延迟修补和固定运行时 |
+| `vtype-linux` | 微信拼音 Fcitx5 插件，含小鹤双拼、模糊音、自定义翻页键和固定运行时 |
 | `wxc` | 微信输入法设备关联与剪贴板客户端，使用官方预编译包 |
 | `honk` | 带原生 API 和内嵌 doona 的固定预编译版本 |
 | `try` | tobi/try，修复 NixOS Ruby shebang |
