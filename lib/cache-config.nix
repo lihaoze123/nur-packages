@@ -22,29 +22,4 @@
       key = "nur:dJh05Op2+iv3GCHoaF2+1FfQtqcUZzf/4v/ZTaLHomY=";
     };
   };
-  groups = {
-    nur = [ "nur" ];
-    computer-use = [ "niri" "codex" ];
-    speech = [ "speech" ];
-    kernel = [ "kernel" ];
-    system = [ "nur" "niri" "codex" "speech" "kernel" ];
-  };
-  packages = {
-    cloudflare-cli = [ ];
-    dbx = [ ];
-    honk = [ ];
-    try = [ ];
-    vscode = [ ];
-    vtype-linux = [ ];
-    wxc = [ ];
-    dms-xhup = [ ];
-    edunet = [ ];
-    codex-desktop = [ "computer-use" ];
-    codex-computer-use = [ "computer-use" ];
-    codex-computer-use-niri = [ "computer-use" ];
-    niri-patched = [ "computer-use" ];
-    gxfp5130-fprintd = [ ];
-    gxfp5130-libfprint = [ ];
-    gxfp5130-tools = [ ];
-  };
 }

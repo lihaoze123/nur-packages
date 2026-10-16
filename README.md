@@ -21,7 +21,6 @@ lihaoze123 的独立 NUR 软件包仓库。软件包配方集中维护，安装�
 | `edunet` | 校园网 ePortal CLI |
 | `codex-desktop`、`codex-computer-use`、`codex-computer-use-niri`、`niri-patched` | niri 上的 Codex Computer Use，保留已有缓存所用的版本与依赖 |
 | `gxfp5130-fprintd`、`gxfp5130-libfprint`、`gxfp5130-tools` | GXFP5130 ChicagoHS 指纹支持 |
-| `nur-install`、`nur-with-caches` | 按需选择项目缓存的安装与命令入口 |
 
 目前 Flake 输出支持 `x86_64-linux`。`vscode` 包含非自由软件；Flake 入口已允许，
 通过传统 NUR 入口使用时由调用者设置 `config.allowUnfree`。
@@ -51,37 +50,29 @@ VType 从源码构建插件和 Android 宿主程序；引擎、词库、设备�
 安装和更新 Nix 包不会自动初始化、关联设备或重启输入法。
 VType 的初始化与运行说明见 [pkgs/vtype-linux/README.md](pkgs/vtype-linux/README.md)。
 
-## 按需使用缓存
+## 缓存
 
-默认 Nix 配置只查询官方缓存和清华镜像。缓存的信任列表与查询列表分开维护：
-`trusted-substituters` 和公钥允许使用指定缓存，不会主动查询它们。
-项目缓存只在相关命令内启用；Nix 没有按单个 derivation 自动选择缓存的机制。
+缓存地址和公钥集中维护在 `lib/cache-config.nix`，由主机 Nix 配置直接启用。
+下载使用普通 `nix build`、`nix profile` 或系统构建命令，无需额外的安装器或缓存选择包装。
+长期使用的软件应声明在 NixOS / Home Manager 配置中，`nix profile` 仅用于临时试用。
 
-```sh
-# 自动选择这个包适用的公开项目缓存
-nix run github:lihaoze123/nur-packages#install -- codex-desktop
+私有 NUR 缓存为 `https://cache.chumeng.xyz/nur`。在已配置只读凭据的 NixOS 主机上，
+可直接声明：
 
-# 在配置了私有 Attic 只读 token的个人设备上，同时使用 NUR 缓存
-nix run github:lihaoze123/nur-packages#install -- --private dbx edunet
-
-# 对已安装的包升级，缓存只用于此命令
-nix run github:lihaoze123/nur-packages#with-caches -- nur nix profile upgrade dbx
-
-# 查看将使用的缓存，不执行构建
-nix run github:lihaoze123/nur-packages#with-caches -- computer-use --print-config
+```nix
+nix.settings = {
+  extra-substituters = [ "https://cache.chumeng.xyz/nur" ];
+  extra-trusted-public-keys = [ "nur:dJh05Op2+iv3GCHoaF2+1FfQtqcUZzf/4v/ZTaLHomY=" ];
+  netrc-file = "/run/agenix/attic-netrc";
+};
 ```
 
-缓存组：`computer-use`（Niri 和 Codex）、`speech`（VoCoType）、`kernel`
-（CachyOS）、`nur`（VPS 上的私有 Attic）、`system`（系统构建所需的这些缓存）。
-可用逗号组合，例如 `nur,computer-use`。普通 `nix profile` 命令不会自动加上它们。
-
-NUR 缓存使用 `https://cache.chumeng.xyz/nur`，由 VPS 上的 Attic 管理。
-缓存保持私有，设备通过 Nix daemon 的 `netrc-file` 提供只读 token；上传使用单独的
-Attic token。签名私钥由服务端管理，日常设备和 CI 不需要 S3 凭据或签名私钥。
+`netrc-file` 应指向主机密钥管理工具生成的 root 可读文件；不要将明文 token 写进
+Nix 配置或 Nix store。公开项目缓存也由主机按需声明，NUR 包自身不改写客户端配置。
+签名私钥由 Attic 服务端管理，上传使用单独的 token。
 
 CI 对三个渠道执行求值检查；实际构建和上传的是 `flake.lock` 对应的
-`ci-pinned.nix.buildOutputs`。源码 IFD 实现后检查完整 Flake，包含原模板因
-`preferLocalBuild` 排除的本仓库封装。CI 不会缓存非自由包作为独立构建目标。
+`ci-pinned.nix.buildOutputs`。源码 IFD 实现后检查完整 Flake。CI 不会缓存非自由包作为独立构建目标。
 
 GitHub Secret `ATTIC_TOKEN` 只允许读取、上传 `nur` 缓存，无管理或删除权限。
 `scripts/cache-attic.sh` 使用临时 token 文件上传闭包，结束后清理；公开缓存公钥

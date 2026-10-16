@@ -1,7 +1,4 @@
 { pkgs ? import <nixpkgs> { } }:
-let
-  tools = pkgs.callPackage ./pkgs/nur-tools { };
-in
 {
   lib = import ./lib { inherit pkgs; };
   nixosModules = import ./nixos-modules;
@@ -14,7 +11,4 @@ in
   vscode = pkgs.callPackage ./pkgs/vscode { };
   vtype-linux = pkgs.callPackage ./pkgs/vtype-linux { };
   wxc = pkgs.callPackage ./pkgs/wxc { };
-
-  nur-with-caches = tools.withCaches;
-  nur-install = tools.install;
 }
