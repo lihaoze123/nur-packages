@@ -59,7 +59,7 @@ jobs:
   cache-pinned:
     if: github.event_name != 'pull_request'
     concurrency:
-      group: nur-r2-cache
+      group: nur-attic-cache
       cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
@@ -72,31 +72,24 @@ jobs:
           extra-trusted-public-keys = niri-computer-use.cachix.org-1:K5LGfljid+PkRn02OLbwsmngqBCoLkbDi9hRMCnsOTg= codex-desktop-linux.cachix.org-1:nX/xy6AdK9hQE24A8ALGjkCKj2ObFmcnemiL5Cid4nk=
     - name: Configure private cache reads
       env:
-        R2_CACHE_CREDENTIALS: ${{ secrets.R2_CACHE_CREDENTIALS }}
-        R2_CACHE_STORE: ${{ vars.R2_CACHE_STORE }}
+        ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
       run: |
-        if [[ -n "$R2_CACHE_CREDENTIALS" && -n "$R2_CACHE_STORE" ]]; then
-          umask 077
-          printf '%s\n' "$R2_CACHE_CREDENTIALS" > "$RUNNER_TEMP/r2-credentials"
-          sudo install -Dm600 "$RUNNER_TEMP/r2-credentials" /root/.aws/credentials
-          echo "extra-substituters = $R2_CACHE_STORE" | sudo tee -a /etc/nix/nix.conf > /dev/null
-          echo 'extra-trusted-public-keys = r2-fonts-1:WlP+O4M04sA1u8qsLINKBmzg2YUHWJGQQRi3dbqDJaA=' | sudo tee -a /etc/nix/nix.conf > /dev/null
-          sudo systemctl restart nix-daemon
-        fi
+        : "${ATTIC_TOKEN:?}"
+        umask 077
+        printf 'machine cache.chumeng.xyz login attic password %s\n' "$ATTIC_TOKEN" > "$RUNNER_TEMP/attic-netrc"
+        sudo install -Dm600 "$RUNNER_TEMP/attic-netrc" /etc/nix/attic-netrc
+        echo 'netrc-file = /etc/nix/attic-netrc' | sudo tee -a /etc/nix/nix.conf > /dev/null
+        echo 'extra-substituters = https://cache.chumeng.xyz/nur' | sudo tee -a /etc/nix/nix.conf > /dev/null
+        echo 'extra-trusted-public-keys = nur:dJh05Op2+iv3GCHoaF2+1FfQtqcUZzf/4v/ZTaLHomY=' | sudo tee -a /etc/nix/nix.conf > /dev/null
+        sudo systemctl restart nix-daemon
     - name: Build the locked package outputs
       run: |
         nix build --impure --file ci-pinned.nix buildOutputs --no-link --json > "$RUNNER_TEMP/nur-build.json"
         jq -r '.[].outputs[]' "$RUNNER_TEMP/nur-build.json" > "$RUNNER_TEMP/nur-paths"
     - name: Check the complete flake after source IFD is materialized
       run: nix flake check --no-build
-    - name: Publish signed outputs to existing R2 cache
+    - name: Publish outputs to the private Attic cache
       env:
-        R2_CACHE_CREDENTIALS: ${{ secrets.R2_CACHE_CREDENTIALS }}
-        NIX_CACHE_SIGNING_KEY: ${{ secrets.NIX_CACHE_SIGNING_KEY }}
-        R2_CACHE_STORE: ${{ vars.R2_CACHE_STORE }}
+        ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
       run: |
-        if [[ -z "$R2_CACHE_CREDENTIALS" || -z "$NIX_CACHE_SIGNING_KEY" || -z "$R2_CACHE_STORE" ]]; then
-          echo 'R2 cache credentials are not configured.' >&2
-          exit 1
-        fi
-        nix shell --inputs-from . nixpkgs#rclone nixpkgs#jq -c bash scripts/cache-r2.sh "$RUNNER_TEMP/nur-paths"
+        nix shell --inputs-from . nixpkgs#attic-client -c bash scripts/cache-attic.sh "$RUNNER_TEMP/nur-paths"
