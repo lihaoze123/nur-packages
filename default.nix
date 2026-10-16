@@ -7,6 +7,7 @@ in
   nixosModules = import ./nixos-modules;
   overlays = import ./overlays;
 
+  cloudflare-cli = pkgs.callPackage ./pkgs/cloudflare-cli { };
   dbx = pkgs.callPackage ./pkgs/dbx { };
   honk = pkgs.callPackage ./pkgs/honk { };
   try = pkgs.callPackage ./pkgs/try { };

@@ -30,6 +30,7 @@
     system = [ "nur" "niri" "codex" "speech" "kernel" ];
   };
   packages = {
+    cloudflare-cli = [ ];
     dbx = [ ];
     honk = [ ];
     try = [ ];

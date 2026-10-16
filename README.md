@@ -10,6 +10,7 @@ lihaoze123 的独立 NUR 软件包仓库。软件包配方集中维护，安装�
 
 | 包 | 内容 |
 | --- | --- |
+| `cloudflare-cli` | Cloudflare 官方 `cf` / `cloudflare` CLI，使用 npm 发布包 |
 | `dbx` | DBX 官方预编译 AppImage，包含 NixOS 启动环境、菜单入口和图标 |
 | `vtype-linux` | 微信拼音 Fcitx5 插件，含小鹤双拼、云延迟修补和固定运行时 |
 | `wxc` | 微信输入法设备关联与剪贴板客户端，使用官方预编译包 |
@@ -85,7 +86,7 @@ CI 不会自动公开私有桶、清理旧对象或缓存非自由包作为独�
 
 ## NUR、Flake 和 overlay
 
-`default.nix` 符合传统 NUR 接口，维护六个本地配方及缓存工具，所有依赖取自调用者的 `pkgs`。
+`default.nix` 符合传统 NUR 接口，维护本地配方及缓存工具，所有依赖取自调用者的 `pkgs`。
 已有独立 Flake 的四个项目通过 `flake.nix` 的 `packages`/`legacyPackages` 聚合，
 并在 Flake 中提供对应 NixOS 模块；它们保持上游自己的配方和依赖锁，不加入
 传统 NUR 的查询集合，以避免查询阶段的远程源码 IFD。
