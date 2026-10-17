@@ -13,10 +13,6 @@
       url = "https://fcitx5-vinput.cachix.org";
       key = "fcitx5-vinput.cachix.org-1:XpX3AA6+dDIX4qJhb1QM7sbTwX6/qSlGvW8Z5NK6XdU=";
     };
-    kernel = {
-      url = "https://attic.xuyh0120.win/lantian";
-      key = "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc=";
-    };
     nur = {
       url = "https://cache.chumeng.xyz/nur";
       key = "nur:dJh05Op2+iv3GCHoaF2+1FfQtqcUZzf/4v/ZTaLHomY=";
