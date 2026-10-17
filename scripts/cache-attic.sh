@@ -24,4 +24,9 @@ if [[ ! -s $1 ]]; then
   exit 0
 fi
 XDG_CONFIG_HOME="$cache_temp" attic push ci:nur --stdin --jobs 4 < "$1"
+# Every explicitly exported output is a private-cache target. Only its public
+# dependencies may be omitted by Attic's upstream cache filter.
+XDG_CONFIG_HOME="$cache_temp" attic push ci:nur --stdin --jobs 4 \
+  --no-closure --ignore-upstream-cache-filter < "$1"
+ATTIC_TOKEN_FILE="$cache_temp/token" python3 scripts/cache_metadata.py "$1"
 echo "Published runtime closures to the private Attic cache."

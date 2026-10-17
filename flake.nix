@@ -24,6 +24,11 @@
       packages = forAllSystems (system: nixpkgs.lib.filterAttrs
         (_: value: nixpkgs.lib.isDerivation value)
         self.legacyPackages.${system});
+      ciMetadata = forAllSystems (system: import ./ci-private.nix {
+        inherit system;
+        inherit (nixpkgs) lib;
+        packages = self.packages.${system};
+      });
       nixosModules = {
         computer-use = inputs.computer-use.nixosModules.default;
         edunet = inputs.edunet.nixosModules.default;

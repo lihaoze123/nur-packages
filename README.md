@@ -12,6 +12,7 @@ lihaoze123 的独立 NUR 软件包仓库。软件包配方集中维护，安装�
 | --- | --- |
 | `cloudflare-cli` | Cloudflare 官方 `cf` / `cloudflare` CLI，使用 npm 发布包 |
 | `dbx` | DBX 官方预编译 AppImage，包含 NixOS 启动环境、菜单入口和图标 |
+| `fcitx5-vinput-lite`、`fcitx5-vinput-lite-upstream` | 云端语音输入插件；前者含按键重复修复及回归测试，后者保留原版 |
 | `vtype-linux` | 微信拼音 Fcitx5 插件，含小鹤双拼、云延迟修补和固定运行时 |
 | `wxc` | 微信输入法设备关联与剪贴板客户端，使用官方预编译包 |
 | `honk` | 带原生 API 和内嵌 doona 的固定预编译版本 |
@@ -71,8 +72,24 @@ nix.settings = {
 Nix 配置或 Nix store。公开项目缓存也由主机按需声明，NUR 包自身不改写客户端配置。
 签名私钥由 Attic 服务端管理，上传使用单独的 token。
 
-CI 对三个渠道执行求值检查；实际构建和上传的是 `flake.lock` 对应的
-`ci-pinned.nix.buildOutputs`。源码 IFD 实现后检查完整 Flake。CI 不会缓存非自由包作为独立构建目标。
+CI 对三个渠道执行传统 NUR 求值检查；私有缓存目标由
+`ciMetadata.x86_64-linux.buildJobPackages` 自动生成，包含全部可构建包和所有输出，
+包括 Codex、VS Code 等非自由包。broken 和不支持当前平台的包不进入构建矩阵。
+`ci.nix` 保留模板的公共筛选规则，私有缓存不受其非自由软件过滤限制。
+
+`nix-eval-jobs` 分别求值每个目标，求值错误会记录并使最终检查失败，其他正常目标
+仍可继续构建。只有全部输出都存在于私有 Attic 的包才跳过；上游 Cachix 命中
+不能替代私有缓存命中。每个包独立构建全部输出，成功后立即上传运行时闭包，
+再核对 StorePath、NarHash、NarSize 和 References。已有官方缓存签名的公共依赖
+不重复上传；显式导出的目标输出始终保存到私有 Attic。
+
+每日 03:17 UTC 检查缓存覆盖，每周一额外在空 store 中下载全部目标及运行时依赖，
+验证签名和内容；不会在验证 store 中编译缺失产物。也可手动运行构建工作流并打开
+`audit`。PR 只构建验证，只有 main/master 的非 PR 工作流可以上传。
+
+主机应直接消费 NUR 自己锁定的依赖，**不要让 NUR 的 nixpkgs 跟随主机 nixpkgs**；
+否则主机更新可能改变产物路径，无法命中 NUR CI 构建的缓存。上游项目已有的独立
+依赖锁定继续保留。私有缓存命中要求精确的 store path，包名和版本相同还不够。
 
 GitHub Secret `ATTIC_TOKEN` 只允许读取、上传 `nur` 缓存，无管理或删除权限。
 `scripts/cache-attic.sh` 使用临时 token 文件上传闭包，结束后清理；公开缓存公钥
@@ -93,7 +110,6 @@ NixOS 或 Home Manager 可通过 Flake 输入使用：
 
 ```nix
 inputs.nur-packages.url = "github:lihaoze123/nur-packages";
-inputs.nur-packages.inputs.nixpkgs.follows = "nixpkgs";
 
 # 在模块内
 environment.systemPackages = [
@@ -109,9 +125,10 @@ Overlay 将软件包放在 `pkgs.nur-lihaoze123` 中，不覆盖 nixpkgs 同名�
 
 ## 模板结构
 
-- `default.nix`：本地配方以及模板预留的 `lib`、`nixosModules`、`overlays` 入口。
+- `default.nix`、`lib/package-set.nix`：自动发现 `pkgs/<包名>/default.nix`，保留模板预留的入口。
 - `flake.nix`：聚合已有项目、生成按系统的软件包集合，并提供上游模块。
 - `ci.nix`：模板提供的构建与缓存输出筛选。
+- `ci-private.nix`：私有缓存的全包构建集合及全部输出。
 - `lib/`、`nixos-modules/`、`overlays/` 和 `overlay.nix`：模板的扩展入口。
 - `.github/workflows/build.yml`、`.github/dependabot.yml`：模板的 CI 与依赖维护配置。
 
@@ -123,13 +140,12 @@ nixpkgs 沿用迁移前的锁定版本；overlay 使用独立命名空间，避�
 
 更新包时修改版本、源码修订和哈希，再对该包求值、构建及检查。
 `flake.lock` 固定 nixpkgs，保持运行依赖可复现；需要更新时执行 `nix flake update nixpkgs`。
-沿用模板的 `ci.nix`，分别导出 `buildPkgs`、`cachePkgs`、`buildOutputs`、
-`cacheOutputs`；过滤 broken、非自由及 `preferLocalBuild` 软件包。
-GitHub Actions 在三个 nixpkgs 分支上检查传统 NUR 受限求值，另对锁定版本
-构建 `buildOutputs` 并上传私有 Attic。每日 03:17 UTC 定时运行，Dependabot 每周检查 Actions 和 Nix 更新。
+新增本地包只需添加 `pkgs/<包名>/default.nix`，包注册和 CI 目标自动生成，
+无需再修改包名清单。同一作用域内的软件包可直接通过参数引用其他本地包。
+GitHub Actions 按包独立构建、上传并验证私有 Attic；官方缓存已有的依赖不重复上传。
 项目公开 Cachix 缓存用于相关构建的下载；进入 NUR 公共索引后，
 将 `NUR_REGISTERED` 设为 `true`，成功的 push 工作流会通知 NUR 更新。
 回归脚本在 `tests/vtype-linux/`，仅在相关代码发生变化时运行。
 
-本仓库的软件包配方、文档与测试采用 MIT 许可证；VType 补丁沿用上游
+本仓库的软件包配方、文档与测试采用 MIT 许可证；VType 和 vinput 补丁沿用上游
 GPL-3.0 许可证。打包的软件自身许可证见各包的 `meta.license`。
