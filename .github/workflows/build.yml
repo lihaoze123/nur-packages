@@ -155,7 +155,7 @@ jobs:
     - uses: ./.github/actions/nix
       with:
         attic-token: ${{ secrets.ATTIC_TOKEN }}
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         name: cache-plan
     - name: Download and verify runtime closures in an empty store
