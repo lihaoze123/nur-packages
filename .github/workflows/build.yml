@@ -96,7 +96,7 @@ jobs:
         if [[ $(date -u +%u) == 1 ]]; then
           echo 'enabled=true' >> "$GITHUB_OUTPUT"
         fi
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: cache-plan
         path: |
@@ -138,7 +138,7 @@ jobs:
         ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
       run: |
         nix shell --inputs-from . nixpkgs#attic-client nixpkgs#python3 -c bash scripts/cache-attic.sh "$RUNNER_TEMP/nur-paths"
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: ${{ !matrix.skip && always() }}
       with:
         name: outputs-${{ matrix.attr }}
