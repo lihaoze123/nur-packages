@@ -128,7 +128,7 @@ Overlay 将软件包放在 `pkgs.nur-lihaoze123` 中，不覆盖 nixpkgs 同名�
 - `default.nix`、`lib/package-set.nix`：自动发现 `pkgs/<包名>/default.nix`，保留模板预留的入口。
 - `flake.nix`：聚合已有项目、生成按系统的软件包集合，并提供上游模块。
 - `ci.nix`：模板提供的构建与缓存输出筛选。
-- `ci-private.nix`：私有缓存的全包构建集合及全部输出。
+- `ci-private.nix`：私有缓存的全包构建集合、全部输出及更新脚本。
 - `lib/`、`nixos-modules/`、`overlays/` 和 `overlay.nix`：模板的扩展入口。
 - `.github/workflows/build.yml`、`.github/dependabot.yml`：模板的 CI 与依赖维护配置。
 
@@ -140,9 +140,26 @@ nixpkgs 沿用迁移前的锁定版本；overlay 使用独立命名空间，避�
 
 更新包时修改版本、源码修订和哈希，再对该包求值、构建及检查。
 `flake.lock` 固定 nixpkgs，保持运行依赖可复现；需要更新时执行 `nix flake update nixpkgs`。
-新增本地包只需添加 `pkgs/<包名>/default.nix`，包注册和 CI 目标自动生成，
-无需再修改包名清单。同一作用域内的软件包可直接通过参数引用其他本地包。
-GitHub Actions 按包独立构建、上传并验证私有 Attic；官方缓存已有的依赖不重复上传。
+新增本地包只需添加 `pkgs/<包名>/default.nix`，无需再修改包名清单；包注册、
+CI 目标和默认更新脚本自动生成。Flake 聚合项目仍通过输入和 `lib/flake-projects.nix`
+公开相应包，更新任务直接从 `flake.lock` 的根输入发现，不维护另一份输入名清单。
+
+每周一 02:43 UTC 按独立包或配套组件组生成更新 PR，不自动合并。优先稳定发行版
+及稳定标签，没有稳定版的源码项目跟踪分支；仅提供预编译文件的项目使用可用的发布渠道。
+普通包默认运行 `nix-update`，特殊更新器或分组声明放在包目录的 `update.json`，
+不维护中央包名清单。例如 vinput 原版随补丁版更新，VS Code 随 nixpkgs 更新，
+Computer Use 的配套输入作为一个整体更新。
+
+手动执行某个包的更新脚本（在仓库根目录）：
+
+```sh
+nix run .#ciMetadata.x86_64-linux.updateScripts.fcitx5-vinput-lite
+python3 scripts/update-package.py --list
+```
+
+自动 PR 使用 `GITHUB_TOKEN`，需要在仓库 Actions 设置中允许创建 Pull Request。
+更新 PR 创建后显式触发构建工作流，无需额外 PAT；PR CI 不上传，合并后进入私有缓存。
+Dependabot 每周只更新 Actions 依赖，Nix 输入由上述分组更新工作流处理。
 项目公开 Cachix 缓存用于相关构建的下载；进入 NUR 公共索引后，
 将 `NUR_REGISTERED` 设为 `true`，成功的 push 工作流会通知 NUR 更新。
 回归脚本在 `tests/vtype-linux/`，仅在相关代码发生变化时运行。

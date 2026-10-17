@@ -21,6 +21,7 @@ def load_script(name):
 
 
 planner = load_script("ci-plan")
+updater = load_script("update-package")
 OUT = "/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-example"
 DEV = "/nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-example-dev"
 
@@ -78,6 +79,82 @@ class MetadataTests(unittest.TestCase):
         error = urllib.error.HTTPError("https://cache.invalid", 404, "Not Found", {}, None)
         with patch("urllib.request.urlopen", side_effect=error):
             self.assertIsNone(cache_metadata.fetch_metadata(OUT, "test-only-token"))
+
+
+class UpdateTests(unittest.TestCase):
+    def test_upstream_owner_changes_with_the_source_revision(self):
+        with tempfile.TemporaryDirectory() as directory:
+            recipe = Path(directory) / "default.nix"
+            recipe.write_text('''let
+  upstreamSrc = fetchFromGitHub {
+    owner = "old-owner";
+    repo = "old-repo";
+    rev = "old-revision";
+    hash = "old-hash";
+  };
+  version = "0-unstable-2026-10-13";
+in upstreamSrc
+''')
+            with patch.object(updater, "source_revision", return_value=("new-revision", None, "2026-10-17")), patch.object(updater, "run", return_value='{"hash":"new-hash"}'), patch.object(updater, "Path", return_value=recipe):
+                updater.update_vtype({"repo": "new-owner/new-repo"})
+            result = recipe.read_text()
+            self.assertIn('owner = "new-owner";', result)
+            self.assertIn('repo = "new-repo";', result)
+            self.assertIn('rev = "new-revision";', result)
+
+    def test_new_unpinned_and_existing_pinned_inputs_can_both_update(self):
+        for url in ["github:example/suite", "github:example/suite/old", "github:example/suite?ref=main&dir=nix"]:
+            with self.subTest(url=url):
+                updated = updater.pin_flake_url(f'url = "{url}";', "example/suite", "new")
+                suffix = "?dir=nix" if "dir=" in url else ""
+                self.assertEqual(updated, f'url = "github:example/suite/new{suffix}";')
+
+    def test_new_package_is_discovered_without_a_central_list(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "flake.lock").write_text(json.dumps({"root": "root", "nodes": {"root": {"inputs": {}}}}))
+            recipe = root / "pkgs/new-package/default.nix"
+            recipe.parent.mkdir(parents=True)
+            recipe.write_text("{ }: {}")
+            ignored = root / "pkgs/tests"
+            ignored.mkdir()
+            targets = updater.discover_targets(root)
+            self.assertEqual(targets, {"new-package": {"kind": "package", "attr": "new-package"}})
+
+    def test_variants_share_one_update_job(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "flake.lock").write_text(json.dumps({"root": "root", "nodes": {"root": {"inputs": {}}}}))
+            for name in ["plugin", "plugin-upstream"]:
+                recipe = root / "pkgs" / name / "default.nix"
+                recipe.parent.mkdir(parents=True)
+                recipe.write_text("{ }: {}")
+            (root / "pkgs/plugin-upstream/update.json").write_text('{"group":"plugin"}')
+            self.assertEqual(list(updater.discover_targets(root)), ["plugin"])
+
+    def test_new_flake_input_is_discovered_as_one_coupled_group(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            lock = {"root": "root", "nodes": {"root": {"inputs": {"suite": "suite"}}, "suite": {"original": {"type": "github", "owner": "example", "repo": "suite"}}}}
+            (root / "flake.lock").write_text(json.dumps(lock))
+            self.assertEqual(updater.discover_targets(root)["suite"], {"kind": "flake", "input": "suite", "repo": "example/suite"})
+
+    def test_stable_npm_version_is_preferred(self):
+        metadata = {"versions": {"1.2.0": {}, "1.10.0": {}, "2.0.0-beta.1": {}}, "dist-tags": {"latest": "2.0.0-beta.1"}}
+        self.assertEqual(updater.npm_version(metadata), "1.10.0")
+
+    def test_binary_channel_without_stable_release_uses_latest(self):
+        metadata = {"versions": {"1.0.0-beta.17": {}}, "dist-tags": {"latest": "1.0.0-beta.17"}}
+        self.assertEqual(updater.npm_version(metadata), "1.0.0-beta.17")
+
+    def test_source_update_does_not_change_other_dependency_hashes(self):
+        text = 'src = fetchurl { hash = "old"; }; npmDepsHash = "keep";'
+        updated = updater.replace_once(text, r'(src = fetchurl \{ hash = ")[^"]+(";)', r'\g<1>new\2')
+        self.assertEqual(updated, 'src = fetchurl { hash = "new"; }; npmDepsHash = "keep";')
+
+    def test_changed_recipe_structure_requires_updater_attention(self):
+        with self.assertRaises(ValueError):
+            updater.replace_once("unexpected structure", r'rev = "[^"]+"', 'rev = "new"')
 
 
 if __name__ == "__main__":

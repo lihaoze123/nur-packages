@@ -10,6 +10,8 @@ let
 in
 {
   inherit buildJobPackages;
+  updateScripts = lib.mapAttrs (_: package: package.updateScript)
+    (lib.filterAttrs (_: package: package ? updateInfo) packages);
   outputPaths = lib.concatMap
     (package: map (output: package.${output}.outPath) package.outputs)
     (lib.attrValues buildJobPackages);

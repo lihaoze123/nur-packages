@@ -19,6 +19,7 @@ let
 in
 assert builtins.attrNames packages == [ "dependent" "example" ];
 assert builtins.isString packages.dependent.outPath;
+assert packages.example ? updateScript;
 assert packages.example.outPath == raw.outPath;
 assert builtins.attrNames private.buildJobPackages == [ "multiple" "unfree" ];
 assert builtins.length private.outputPaths == 3;
