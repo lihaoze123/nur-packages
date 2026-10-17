@@ -45,7 +45,7 @@ jobs:
           nixpkgs#nodejs nixpkgs#prefetch-npm-deps -c python3 scripts/update-package.py "$UPDATE_TARGET"
     - name: Create or refresh update PR
       id: pr
-      uses: peter-evans/create-pull-request@v7
+      uses: peter-evans/create-pull-request@v8
       with:
         branch: update/${{ matrix.name }}
         title: 'chore(update): 更新 ${{ matrix.name }}'
