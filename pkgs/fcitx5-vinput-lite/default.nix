@@ -24,7 +24,7 @@
 
 stdenv.mkDerivation {
   pname = "fcitx5-vinput-lite";
-  version = "2.4.1";
+  version = "2.4.2";
 
   src = fetchFromGitHub {
     owner = "xifan2333";
