@@ -20,6 +20,7 @@ lihaoze123 的独立 NUR 软件包仓库。软件包配方集中维护，安装�
 | `vscode` | VS Code，包含原有六个扩展 |
 | `dms-xhup` | DMS 小鹤音形插件 |
 | `edunet` | 校园网 ePortal CLI |
+| `oseasy-helper` | 噢易课堂广播视频与文件接收 CLI；官方学生端管理功能仅支持 Windows |
 | `codex-desktop`、`codex-computer-use`、`codex-computer-use-niri`、`niri-patched` | niri 上的 Codex Computer Use，保留已有缓存所用的版本与依赖 |
 | `gxfp5130-fprintd`、`gxfp5130-libfprint`、`gxfp5130-tools` | GXFP5130 ChicagoHS 指纹支持 |
 
