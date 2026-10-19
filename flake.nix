@@ -6,7 +6,7 @@
     url = "github:lihaoze123/dms-xhup/3323ff83dcf34f569f9c433234a2d20e3c0daec1";
     inputs.nixpkgs.follows = "nixpkgs";
   };
-  inputs.computer-use.url = "github:lihaoze123/niri-computer-use/0683aa6b0f16812abc0bc11f7e5a9d3a578522ef";
+  inputs.computer-use.url = "github:lihaoze123/niri-computer-use/daf6e9301200235f9b8af153a22cd321786ad9b2";
   inputs.edunet.url = "github:lihaoze123/hhu-edunet-cli/cd4b7d4d12be160fc8c1aee777adf60267b759a7";
   inputs.gxfp5130Chicago = {
     url = "github:lihaoze123/gxfp5130-chicago/fa78a635b5e4b2f20bf03178a0cdce53bc9318aa";
