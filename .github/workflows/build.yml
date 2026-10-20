@@ -70,7 +70,7 @@ jobs:
           actionlint
           shellcheck scripts/*.sh
           python3 tests/ci/test-cache-ci.py
-          nix eval --impure --json --file tests/ci/test-package-discovery.nix
+          nix eval --impure --json --option allow-import-from-derivation false --file tests/ci/test-package-discovery.nix
         '
 
   eval:
