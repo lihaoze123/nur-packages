@@ -187,6 +187,22 @@ in upstreamSrc
         metadata = {"versions": {"1.0.0-beta.17": {}}, "dist-tags": {"latest": "1.0.0-beta.17"}}
         self.assertEqual(updater.npm_version(metadata), "1.0.0-beta.17")
 
+    def test_newer_npm_prerelease_is_not_downgraded_to_old_stable(self):
+        metadata = {"versions": {"0.15.0": {}, "1.0.0-beta.18": {}}, "dist-tags": {"latest": "1.0.0-beta.18"}}
+        self.assertEqual(updater.npm_version(metadata, "1.0.0-beta.17"), "1.0.0-beta.18")
+
+    def test_npm_dist_tag_rollback_keeps_the_installed_version(self):
+        metadata = {"versions": {"0.15.0": {}}, "dist-tags": {"latest": "1.0.0-beta.17"}}
+        self.assertEqual(updater.npm_version(metadata, "1.0.0-beta.18"), "1.0.0-beta.18")
+
+    def test_newer_stable_release_replaces_npm_prerelease(self):
+        metadata = {"versions": {"1.0.0": {}}, "dist-tags": {"latest": "1.1.0-beta.1"}}
+        self.assertEqual(updater.npm_version(metadata, "1.0.0-beta.18"), "1.0.0")
+
+    def test_semver_prerelease_numbers_use_numeric_order(self):
+        self.assertGreater(updater.semver_key("1.0.0-beta.10"), updater.semver_key("1.0.0-beta.9"))
+        self.assertGreater(updater.semver_key("1.0.0"), updater.semver_key("1.0.0-beta.10"))
+
     def test_source_update_does_not_change_other_dependency_hashes(self):
         text = 'src = fetchurl { hash = "old"; }; npmDepsHash = "keep";'
         updated = updater.replace_once(text, r'(src = fetchurl \{ hash = ")[^"]+(";)', r'\g<1>new\2')
