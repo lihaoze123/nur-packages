@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tarfile
 import tempfile
 import urllib.error
@@ -68,6 +69,8 @@ def update_flake(target):
     text = path.read_text()
     path.write_text(pin_flake_url(text, target["repo"], revision))
     run("nix", "flake", "update", target["input"])
+    # Runtime package definitions use checked-in snapshots, not Flake outputs.
+    subprocess.run([sys.executable, "scripts/sync-project-inputs.py", "--if-supported", target["input"]], check=True)
 
 
 def pin_flake_url(text, repo, revision):
@@ -80,19 +83,25 @@ def pin_flake_url(text, repo, revision):
     return replace_once(text, pattern, replace)
 
 
-def update_vtype(target):
+def update_github_source(target, path, source_name):
     revision, release, date = source_revision(target["repo"])
     source = json.loads(run("nix", "flake", "prefetch", "--json", f"github:{target['repo']}/{revision}"))
-    path = Path("pkgs/vtype-linux/default.nix")
     text = path.read_text()
     owner, repo = target["repo"].split("/", 1)
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?owner = ")[^"]+(";)', rf'\g<1>{owner}\2')
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?repo = ")[^"]+(";)', rf'\g<1>{repo}\2')
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?rev = ")[^"]+(";)', rf'\g<1>{revision}\2')
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?hash = ")[^"]+(";)', rf'\g<1>{source["hash"]}\2')
+    prefix = re.escape(source_name) + r' = fetchFromGitHub \{[\s\S]*?'
+    for field, value in [("owner", owner), ("repo", repo), ("rev", revision), ("hash", source["hash"])]:
+        text = replace_once(text, rf'({prefix}{field} = ")[^"]+(";)', rf'\g<1>{value}\2')
     version = release["tag_name"].removeprefix("v") if release else f"0-unstable-{date}"
     text = replace_once(text, r'(^  version = ")[^"]+(";)', rf'\g<1>{version}\2')
     path.write_text(text)
+
+
+def update_vtype(target):
+    update_github_source(target, Path("pkgs/vtype-linux/default.nix"), "upstreamSrc")
+
+
+def update_github(target):
+    update_github_source(target, Path(f"pkgs/{target['attr']}/default.nix"), "src")
 
 
 def update_honk(target):
@@ -172,8 +181,9 @@ def discover_targets(root=Path(".")):
         name = recipe.parent.name
         metadata_file = recipe.parent / "update.json"
         metadata = json.loads(metadata_file.read_text()) if metadata_file.exists() else {}
-        group = metadata.pop("group", name)
-        if group != name:
+        update_group = metadata.pop("group", None)
+        group = update_group or name
+        if update_group is not None:
             aliases.append((name, group))
             continue
         if group in targets:
@@ -196,9 +206,9 @@ def main():
         return
     if args.target not in targets:
         parser.error("Specify a target from --list")
-    before = {path: path.read_bytes() for path in [Path("flake.nix"), *Path("pkgs").rglob("*.nix")]}
+    before = {path: path.read_bytes() for path in [Path("flake.nix"), *Path("pkgs").rglob("*.nix"), *Path("nixos-modules").rglob("*.nix")]}
     target = targets[args.target]
-    handlers = {"flake": update_flake, "vtype": update_vtype, "honk": update_honk, "cloudflare": update_cloudflare, "package": update_package}
+    handlers = {"flake": update_flake, "github": update_github, "vtype": update_vtype, "honk": update_honk, "cloudflare": update_cloudflare, "package": update_package}
     if target["kind"] == "lock":
         run("nix", "flake", "update", target["input"])
     else:
