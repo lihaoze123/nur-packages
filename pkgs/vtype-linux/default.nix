@@ -6,8 +6,8 @@ let
   upstreamSrc = fetchFromGitHub {
     owner = "zhl-HFUT";
     repo = "vtype-linux";
-    rev = "eff4ff0673942849ad5a039d6353690d5d740a11";
-    hash = "sha256-lIeyb+iXjlyqXuxd20l+MvOCqrRCHuXofRagDU4rhIc=";
+    rev = "f24a73f4f326271cf5a0ffedde7ebb67c22fa22c";
+    hash = "sha256-4BNTkmoj25EUdSGV9m3DQrK9x7dxY1OaVbE1TUHg/4M=";
   };
   src = applyPatches {
     name = "vtype-linux-source";
@@ -21,7 +21,7 @@ let
     export WETYPE_SNAPPY_LIBRARY="${lib.getLib snappy}/lib/libsnappy.so"
     exec ${python}/bin/python3 "$@"
   '';
-  version = "0.1.8";
+  version = "0-unstable-2026-10-18";
   ndk = fetchurl {
     url = "https://dl.google.com/android/repository/android-ndk-r27c-linux.zip";
     hash = "sha256-WcL23JZ0O12vXRYmaEZAsgpr0rHYWxMVa5AzN0G61cw=";
@@ -86,8 +86,10 @@ stdenv.mkDerivation {
   inherit version src;
 
   nativeBuildInputs = [ cmake ];
+  nativeCheckInputs = [ python ];
   buildInputs = [ fcitx5 ];
   cmakeDir = "../fcitx5-wetype";
+  cmakeFlags = [ "-DWETYPE_PYTHON_EXECUTABLE=${placeholder "out"}/libexec/wetype-python" ];
   doCheck = true;
   checkPhase = ''
     runHook preCheck
@@ -98,9 +100,7 @@ stdenv.mkDerivation {
   '';
 
   postPatch = ''
-    # 上游的云代理入口使用 /usr/bin/python3；NixOS 使用固定的运行时。
     substituteInPlace fcitx5-wetype/src/wetype.cpp \
-      --replace-fail '"/usr/bin/python3"' '"${cloudPython}"' \
       --replace-fail '(eng + "/wetype-harness").c_str()' '"${harness}/libexec/wetype-harness"' \
       --replace-fail '(eng+"/wetype-harness").c_str()' '"${harness}/libexec/wetype-harness"' \
       --replace-fail 'qemu = eng + "/qemu-aarch64-static";' 'qemu = "${pkgsStatic.qemu-user}/bin/qemu-aarch64";' \
@@ -113,6 +113,7 @@ stdenv.mkDerivation {
     substituteInPlace "$out/share/fcitx5/addon/wetype.conf" \
       --replace-fail 'Library=libfcitx5-wetype' "Library=$out/lib/fcitx5/libfcitx5-wetype"
     mkdir -p "$out/libexec"
+    ln -s ${cloudPython} "$out/libexec/wetype-python"
     ln -s ${pkgsStatic.qemu-user}/bin/qemu-aarch64 "$out/libexec/qemu-aarch64-static"
     ln -s ${harness}/libexec/wetype-harness "$out/libexec/wetype-harness"
     ln -s ${harness}/lib/libandroid.so "$out/libexec/libandroid.so"

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tarfile
 import tempfile
 import urllib.error
@@ -48,10 +49,30 @@ def stable_ref(repo):
     return {"tag_name": tag}
 
 
-def source_revision(repo):
+def source_revision(repo, minimum_revision=None):
     release = stable_ref(repo)
-    ref = release["tag_name"] if release else fetch_json(f"https://api.github.com/repos/{repo}")["default_branch"]
-    commit = fetch_json(f"https://api.github.com/repos/{repo}/commits/{urllib.parse.quote(ref, safe='')}")
+    api = f"https://api.github.com/repos/{repo}"
+
+    def commit_at(ref):
+        return fetch_json(f"{api}/commits/{urllib.parse.quote(ref, safe='')}")
+
+    def preserves_current(commit):
+        if minimum_revision is None or commit["sha"] == minimum_revision:
+            return True
+        comparison = fetch_json(f"{api}/compare/{minimum_revision}...{commit['sha']}")
+        return comparison["status"] in ("ahead", "identical")
+
+    branch = None if release else fetch_json(api)["default_branch"]
+    commit = commit_at(release["tag_name"] if release else branch)
+    if not preserves_current(commit):
+        if release:
+            # An old stable tag must not discard fixes already in our source.
+            release = None
+            branch = fetch_json(api)["default_branch"]
+            commit = commit_at(branch)
+        if not preserves_current(commit):
+            # Also protect against a default-branch force push or rollback.
+            commit = commit_at(minimum_revision)
     return commit["sha"], release, commit["commit"]["committer"]["date"][:10]
 
 
@@ -63,11 +84,14 @@ def replace_once(text, pattern, replacement):
 
 
 def update_flake(target):
-    revision, _, _ = source_revision(target["repo"])
     path = Path("flake.nix")
     text = path.read_text()
+    current = re.search(rf'github:{re.escape(target["repo"])}/([0-9a-f]{{40}})(?=["?])', text)
+    revision, _, _ = source_revision(target["repo"], minimum_revision=current[1] if current else None)
     path.write_text(pin_flake_url(text, target["repo"], revision))
     run("nix", "flake", "update", target["input"])
+    # Runtime package definitions use checked-in snapshots, not Flake outputs.
+    subprocess.run([sys.executable, "scripts/sync-project-inputs.py", "--if-supported", target["input"]], check=True)
 
 
 def pin_flake_url(text, repo, revision):
@@ -80,19 +104,29 @@ def pin_flake_url(text, repo, revision):
     return replace_once(text, pattern, replace)
 
 
-def update_vtype(target):
-    revision, release, date = source_revision(target["repo"])
-    source = json.loads(run("nix", "flake", "prefetch", "--json", f"github:{target['repo']}/{revision}"))
-    path = Path("pkgs/vtype-linux/default.nix")
+def update_github_source(target, path, source_name):
     text = path.read_text()
+    prefix = re.escape(source_name) + r' = fetchFromGitHub \{[\s\S]*?'
+    current = re.search(rf'{prefix}rev = "([^"]+)";', text)
+    if current is None:
+        raise ValueError(f"Missing pinned revision in {path}: {source_name}")
+    revision, release, date = source_revision(target["repo"], minimum_revision=current[1])
+    source = json.loads(run("nix", "flake", "prefetch", "--json", f"github:{target['repo']}/{revision}"))
     owner, repo = target["repo"].split("/", 1)
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?owner = ")[^"]+(";)', rf'\g<1>{owner}\2')
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?repo = ")[^"]+(";)', rf'\g<1>{repo}\2')
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?rev = ")[^"]+(";)', rf'\g<1>{revision}\2')
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?hash = ")[^"]+(";)', rf'\g<1>{source["hash"]}\2')
-    version = release["tag_name"].removeprefix("v") if release else f"0-unstable-{date}"
-    text = replace_once(text, r'(^  version = ")[^"]+(";)', rf'\g<1>{version}\2')
+    for field, value in [("owner", owner), ("repo", repo), ("rev", revision), ("hash", source["hash"])]:
+        text = replace_once(text, rf'({prefix}{field} = ")[^"]+(";)', rf'\g<1>{value}\2')
+    if release or revision != current[1]:
+        version = release["tag_name"].removeprefix("v") if release else f"0-unstable-{date}"
+        text = replace_once(text, r'(^  version = ")[^"]+(";)', rf'\g<1>{version}\2')
     path.write_text(text)
+
+
+def update_vtype(target):
+    update_github_source(target, Path("pkgs/vtype-linux/default.nix"), "upstreamSrc")
+
+
+def update_github(target):
+    update_github_source(target, Path(f"pkgs/{target['attr']}/default.nix"), "src")
 
 
 def update_honk(target):
@@ -111,15 +145,30 @@ def update_honk(target):
     path.write_text(text)
 
 
-def npm_version(metadata):
+def semver_key(version):
+    match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?", version)
+    if not match:
+        raise ValueError(f"Unsupported npm version: {version}")
+    prerelease = match[4]
+    identifiers = tuple((0, int(part)) if part.isdigit() else (1, part)
+                        for part in prerelease.split(".")) if prerelease else ()
+    return (*map(int, match.group(1, 2, 3)), prerelease is None, identifiers)
+
+
+def npm_version(metadata, current_version=None):
     stable = [version for version in metadata["versions"] if re.fullmatch(r"\d+\.\d+\.\d+", version)]
-    return max(stable, key=lambda version: tuple(map(int, version.split(".")))) if stable else metadata["dist-tags"]["latest"]
+    candidate = max(stable, key=semver_key) if stable else metadata["dist-tags"]["latest"]
+    if current_version is not None and semver_key(candidate) < semver_key(current_version):
+        # Keep a newer prerelease channel rather than reverting to an old
+        # stable release. Never follow a dist-tag backwards either.
+        return max([current_version, metadata["dist-tags"]["latest"]], key=semver_key)
+    return candidate
 
 
 def update_cloudflare(target):
     metadata = fetch_json(f"https://registry.npmjs.org/{target['registry']}")
-    version = npm_version(metadata)
     old_version = run("nix", "eval", "--raw", ".#packages.x86_64-linux.cloudflare-cli.version")
+    version = npm_version(metadata, current_version=old_version)
     if old_version == version:
         return
     source = json.loads(run("nix", "store", "prefetch-file", "--json", metadata["versions"][version]["dist"]["tarball"]))
@@ -172,8 +221,9 @@ def discover_targets(root=Path(".")):
         name = recipe.parent.name
         metadata_file = recipe.parent / "update.json"
         metadata = json.loads(metadata_file.read_text()) if metadata_file.exists() else {}
-        group = metadata.pop("group", name)
-        if group != name:
+        update_group = metadata.pop("group", None)
+        group = update_group or name
+        if update_group is not None:
             aliases.append((name, group))
             continue
         if group in targets:
@@ -196,9 +246,9 @@ def main():
         return
     if args.target not in targets:
         parser.error("Specify a target from --list")
-    before = {path: path.read_bytes() for path in [Path("flake.nix"), *Path("pkgs").rglob("*.nix")]}
+    before = {path: path.read_bytes() for path in [Path("flake.nix"), *Path("pkgs").rglob("*.nix"), *Path("nixos-modules").rglob("*.nix")]}
     target = targets[args.target]
-    handlers = {"flake": update_flake, "vtype": update_vtype, "honk": update_honk, "cloudflare": update_cloudflare, "package": update_package}
+    handlers = {"flake": update_flake, "github": update_github, "vtype": update_vtype, "honk": update_honk, "cloudflare": update_cloudflare, "package": update_package}
     if target["kind"] == "lock":
         run("nix", "flake", "update", target["input"])
     else:
