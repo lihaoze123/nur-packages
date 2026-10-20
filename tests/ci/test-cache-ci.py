@@ -82,6 +82,26 @@ class MetadataTests(unittest.TestCase):
 
 
 class UpdateTests(unittest.TestCase):
+    def test_pinned_github_source_updates_revision_hash_and_version_together(self):
+        with tempfile.TemporaryDirectory() as directory:
+            recipe = Path(directory) / "default.nix"
+            recipe.write_text('''{ }: let
+  version = "2.4.1";
+  src = fetchFromGitHub {
+    owner = "example";
+    repo = "input";
+    rev = "old-commit";
+    hash = "old-hash";
+  };
+in src
+''')
+            with patch.object(updater, "source_revision", return_value=("release-commit", {"tag_name": "v2.4.2"}, "2026-10-14")), patch.object(updater, "run", return_value='{"hash":"release-hash"}'), patch.object(updater, "Path", return_value=recipe):
+                updater.update_github({"repo": "example/input", "attr": "input"})
+            result = recipe.read_text()
+            self.assertIn('version = "2.4.2";', result)
+            self.assertIn('rev = "release-commit";', result)
+            self.assertIn('hash = "release-hash";', result)
+
     def test_upstream_owner_changes_with_the_source_revision(self):
         with tempfile.TemporaryDirectory() as directory:
             recipe = Path(directory) / "default.nix"

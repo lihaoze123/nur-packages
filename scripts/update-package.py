@@ -83,19 +83,25 @@ def pin_flake_url(text, repo, revision):
     return replace_once(text, pattern, replace)
 
 
-def update_vtype(target):
+def update_github_source(target, path, source_name):
     revision, release, date = source_revision(target["repo"])
     source = json.loads(run("nix", "flake", "prefetch", "--json", f"github:{target['repo']}/{revision}"))
-    path = Path("pkgs/vtype-linux/default.nix")
     text = path.read_text()
     owner, repo = target["repo"].split("/", 1)
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?owner = ")[^"]+(";)', rf'\g<1>{owner}\2')
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?repo = ")[^"]+(";)', rf'\g<1>{repo}\2')
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?rev = ")[^"]+(";)', rf'\g<1>{revision}\2')
-    text = replace_once(text, r'(upstreamSrc = fetchFromGitHub \{[\s\S]*?hash = ")[^"]+(";)', rf'\g<1>{source["hash"]}\2')
+    prefix = re.escape(source_name) + r' = fetchFromGitHub \{[\s\S]*?'
+    for field, value in [("owner", owner), ("repo", repo), ("rev", revision), ("hash", source["hash"])]:
+        text = replace_once(text, rf'({prefix}{field} = ")[^"]+(";)', rf'\g<1>{value}\2')
     version = release["tag_name"].removeprefix("v") if release else f"0-unstable-{date}"
     text = replace_once(text, r'(^  version = ")[^"]+(";)', rf'\g<1>{version}\2')
     path.write_text(text)
+
+
+def update_vtype(target):
+    update_github_source(target, Path("pkgs/vtype-linux/default.nix"), "upstreamSrc")
+
+
+def update_github(target):
+    update_github_source(target, Path(f"pkgs/{target['attr']}/default.nix"), "src")
 
 
 def update_honk(target):
@@ -202,7 +208,7 @@ def main():
         parser.error("Specify a target from --list")
     before = {path: path.read_bytes() for path in [Path("flake.nix"), *Path("pkgs").rglob("*.nix"), *Path("nixos-modules").rglob("*.nix")]}
     target = targets[args.target]
-    handlers = {"flake": update_flake, "vtype": update_vtype, "honk": update_honk, "cloudflare": update_cloudflare, "package": update_package}
+    handlers = {"flake": update_flake, "github": update_github, "vtype": update_vtype, "honk": update_honk, "cloudflare": update_cloudflare, "package": update_package}
     if target["kind"] == "lock":
         run("nix", "flake", "update", target["input"])
     else:
