@@ -14,12 +14,12 @@ let
 in
 buildNpmPackage rec {
   pname = "cloudflare-cli";
-  version = "0.15.0";
+  version = "1.0.0-beta.18";
 
   # Use the published bundle, matching `npm install -g cf`.
   src = fetchurl {
     url = "https://registry.npmjs.org/cf/-/cf-${version}.tgz";
-    hash = "sha256-2APBxerlOFL6av1CV67fYfGR2NMFW6K4CN8Bz7nai7M=";
+    hash = "sha256-90HOzNeviKk4mOViPzYXg0EvNQ0wYdXrs0Y4cMjbzvY=";
   };
   sourceRoot = "package";
 
@@ -33,7 +33,7 @@ buildNpmPackage rec {
     '
     cp ${./package-lock.json} package-lock.json
   '';
-  npmDepsHash = "sha256-Fw6qyl3+QJwjc1yef8C1MFKRTI9s4LJdRCgJ1dM3ct8=";
+  npmDepsHash = "sha256-1zIPeRM2emlCmoGS2ABRQV6lmIqu6LMVrrFWurP0SR0=";
   dontNpmBuild = true;
   npmFlags = [ "--ignore-scripts" ];
 
