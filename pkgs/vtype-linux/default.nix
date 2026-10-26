@@ -6,8 +6,8 @@ let
   upstreamSrc = fetchFromGitHub {
     owner = "zhl-HFUT";
     repo = "vtype-linux";
-    rev = "f24a73f4f326271cf5a0ffedde7ebb67c22fa22c";
-    hash = "sha256-4BNTkmoj25EUdSGV9m3DQrK9x7dxY1OaVbE1TUHg/4M=";
+    rev = "a0c8e06e547b97ce1ac764612cb5d8d516a0db54";
+    hash = "sha256-t6Un1NQkYCT46JT+RijhFPk+wrt7FeT/jAevHF6VwjQ=";
   };
   src = applyPatches {
     name = "vtype-linux-source";
@@ -21,7 +21,7 @@ let
     export WETYPE_SNAPPY_LIBRARY="${lib.getLib snappy}/lib/libsnappy.so"
     exec ${python}/bin/python3 "$@"
   '';
-  version = "0-unstable-2026-10-18";
+  version = "0.2.0";
   ndk = fetchurl {
     url = "https://dl.google.com/android/repository/android-ndk-r27c-linux.zip";
     hash = "sha256-WcL23JZ0O12vXRYmaEZAsgpr0rHYWxMVa5AzN0G61cw=";
