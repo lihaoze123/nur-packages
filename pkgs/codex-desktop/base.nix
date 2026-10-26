@@ -142,7 +142,7 @@ let
       (
         lib.elem "read-aloud" featureIds || lib.elem "read-aloud-mcp" featureIds
       ) [ pkgs.alsa-utils ]
-    ++ lib.optionals (lib.elem "computer-use-linux" featureIds) [ pkgs.glib ]
+    ++ lib.optionals (lib.elem "computer-use-linux" featureIds) [ pkgs.glib pkgs.fontconfig ]
     ++ lib.optionals (lib.elem "account-switcher" featureIds) [ pkgs.libsecret ];
   runtimePathFor = featureIds:
     lib.makeBinPath (lib.unique (
@@ -284,7 +284,7 @@ let
         ++ lib.optionals readAloudEnabled [ "codex-read-aloud-linux" ]
         ++ lib.optionals recordReplayBackendEnabled [ "codex-record-replay-linux" ];
       expectedBinaries =
-        lib.optionals computerUseEnabled [ "codex-computer-use-linux" "codex-computer-use-cosmic" ]
+        lib.optionals computerUseEnabled [ "codex-computer-use-linux" "codex-computer-use-cosmic" "codex-computer-use-indicator" ]
         ++ lib.optionals readAloudEnabled [ "codex-read-aloud-linux" ]
         ++ lib.optionals recordReplayBackendEnabled [ "codex-record-replay-linux" ];
     in
@@ -313,6 +313,13 @@ let
     version = "0.1.0";
     src = "${sourceRoot}/global-dictation-linux";
     cargoLock.lockFile = ./global-dictation-Cargo.lock;
+    doCheck = false;
+  };
+  petKwinHelper = staticCratesBuildRustPackage {
+    pname = "codex-pet-kwin";
+    version = "0.1.0";
+    src = "${sourceRoot}/linux-features/pet-overlay/kwin-helper";
+    cargoLock.lockFile = ./pet-kwin-Cargo.lock;
     doCheck = false;
   };
   mcpReaperHelper = staticCratesBuildRustPackage {
@@ -494,6 +501,7 @@ let
         ${lib.optionalString (lib.elem "computer-use-linux" effectiveFeatureIds) ''
         export CODEX_COMPUTER_USE_BINARY_SOURCE="${workspaceHelpers}/bin/codex-computer-use-linux"
         export CODEX_COMPUTER_USE_COSMIC_BINARY_SOURCE="${workspaceHelpers}/bin/codex-computer-use-cosmic"
+        export CODEX_COMPUTER_USE_INDICATOR_BINARY_SOURCE="${workspaceHelpers}/bin/codex-computer-use-indicator"
         ''}
         ${lib.optionalString (lib.elem "read-aloud-mcp" effectiveFeatureIds) ''
         export CODEX_LINUX_READ_ALOUD_MCP_SOURCE="${workspaceHelpers}/bin/codex-read-aloud-linux"
@@ -501,8 +509,11 @@ let
         ${lib.optionalString recordReplayBackendEnabled ''
         export CODEX_RECORD_REPLAY_LINUX_SOURCE="${workspaceHelpers}/bin/codex-record-replay-linux"
         ''}
-        ${lib.optionalString (lib.elem "global-dictation" effectiveFeatureIds) ''
+        ${lib.optionalString (lib.elem "global-dictation" effectiveFeatureIds || lib.elem "wayland-global-shortcuts" effectiveFeatureIds) ''
         export CODEX_GLOBAL_DICTATION_LINUX_SOURCE="${globalDictationHelper}/bin/codex-global-dictation-linux"
+        ''}
+        ${lib.optionalString (lib.elem "pet-overlay" effectiveFeatureIds) ''
+        export CODEX_PET_KWIN_SOURCE="${petKwinHelper}/bin/codex-pet-kwin"
         ''}
         ${lib.optionalString (lib.elem "mcp-helper-reaper" effectiveFeatureIds) ''
         export CODEX_MCP_HELPER_REAPER_SOURCE="${mcpReaperHelper}/bin/codex-mcp-helper-reaper"

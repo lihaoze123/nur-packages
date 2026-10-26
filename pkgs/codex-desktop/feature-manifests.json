@@ -147,6 +147,33 @@
       }
     },
     {
+      "id": "chatgpt-dil-markdown-fallback",
+      "title": "ChatGPT reply Markdown fallback",
+      "description": "Show the saved Markdown reply when the interactive reply renderer fails to start or render.",
+      "defaultEnabled": false,
+      "entrypoints": {
+        "patchDescriptors": "./patch.js"
+      }
+    },
+    {
+      "id": "chatgpt-dots-any-country",
+      "title": "ChatGPT Dots in Any Country",
+      "description": "Keep the ChatGPT Dots entry route visible when the account response is country-gated.",
+      "defaultEnabled": false,
+      "entrypoints": {
+        "patchDescriptors": "./patch.js"
+      }
+    },
+    {
+      "id": "chatgpt-sidebar-separate-history",
+      "title": "Separate ChatGPT Sidebar History",
+      "description": "Default the ChatGPT sidebar to Chat and remember the selected Chat/Work/All history filter.",
+      "defaultEnabled": false,
+      "entrypoints": {
+        "patchDescriptors": "./patch.js"
+      }
+    },
+    {
       "id": "chronicle-skysight",
       "title": "Chronicle / Skysight Activity Memory",
       "description": "Opt-in Linux activity memory with Chronicle controls and a standalone Skysight MCP server.",
@@ -198,6 +225,25 @@
           "systemd-libs"
         ]
       }
+    },
+    {
+      "id": "community-features-in-gui-settings",
+      "title": "Community Features in GUI Settings",
+      "description": "Show a read-only community feature dependency tree with build status in Settings > General.",
+      "defaultEnabled": false,
+      "entrypoints": {
+        "patchDescriptors": "./patch.js"
+      },
+      "packageHooks": [
+        {
+          "source": "./package.sh",
+          "formats": [
+            "deb",
+            "rpm",
+            "pacman"
+          ]
+        }
+      ]
     },
     {
       "id": "community-profile-isolation",
@@ -260,6 +306,15 @@
       "id": "copilot-reasoning-effort",
       "title": "Copilot Reasoning Effort Defaults",
       "description": "Opt-in patch that lets Copilot-auth sessions persist and select reasoning effort defaults on Linux.",
+      "defaultEnabled": false,
+      "entrypoints": {
+        "patchDescriptors": "./patch.js"
+      }
+    },
+    {
+      "id": "desktop-identity",
+      "title": "Community Desktop Identity",
+      "description": "Use the ChatGPT Community desktop entry as Electron's desktop name so notifications and child processes resolve the installed Community icon.",
       "defaultEnabled": false,
       "entrypoints": {
         "patchDescriptors": "./patch.js"
@@ -474,8 +529,21 @@
       "description": "Optional Linux avatar overlay placement and compositor hints.",
       "defaultEnabled": false,
       "entrypoints": {
-        "patchDescriptors": "./patch.js"
+        "patchDescriptors": "./patch.js",
+        "stageHook": "./stage.sh"
       },
+      "resources": [
+        {
+          "source": "kwin-bridge.cjs",
+          "target": ".codex-linux/features/pet-overlay/kwin-bridge.cjs",
+          "mode": "0644"
+        },
+        {
+          "source": "kwin-script.cjs",
+          "target": ".codex-linux/features/pet-overlay/kwin-script.cjs",
+          "mode": "0644"
+        }
+      ],
       "runtimeHooks": {
         "launcher": {
           "source": "launcher-hook.sh",
@@ -544,6 +612,15 @@
       }
     },
     {
+      "id": "reasoning-visibility",
+      "title": "Reasoning Visibility Setting",
+      "description": "Add an opt-in General setting to show available reasoning summaries and keep them expanded after completion.",
+      "defaultEnabled": false,
+      "entrypoints": {
+        "patchDescriptors": "./patch.js"
+      }
+    },
+    {
       "id": "record-and-replay",
       "title": "Record & Replay",
       "description": "Opt-in Linux demo-to-skill recording workflow powered by codex-record-replay-linux.",
@@ -571,10 +648,25 @@
       "title": "Experimental Remote Mobile Control",
       "description": "Opt-in Linux adaptation for experimental Remote host and outbound-control flows.",
       "defaultEnabled": false,
+      "gentoo": {
+        "supported": true,
+        "dependencies": {
+          "RDEPEND": [
+            "sys-apps/util-linux"
+          ]
+        }
+      },
       "entrypoints": {
         "patchDescriptors": "./patch.js",
         "stageHook": "./stage.sh"
-      }
+      },
+      "resources": [
+        {
+          "source": "cold-start-hook.sh",
+          "target": ".codex-linux/cold-start.d/remote-mobile-control",
+          "mode": "0755"
+        }
+      ]
     },
     {
       "id": "shallow-repository-watches",
@@ -732,6 +824,80 @@
               }
             }
           }
+        },
+        {
+          "name": "selected-text-annotation-submit",
+          "settings": {
+            "tweaks": {
+              "selection": {
+                "annotationSubmit": {
+                  "enabled": true
+                }
+              }
+            }
+          }
+        }
+      ],
+      "catalogSubfeatures": [
+        {
+          "id": "dock-icon",
+          "title": "Dock icon",
+          "description": "Expose the Dock icon selector and synchronize the selected icon with Linux windows, tray and supported launchers.",
+          "settingPath": "tweaks.appearance.dockIcon.enabled"
+        },
+        {
+          "id": "ui-font-size",
+          "title": "Extended UI font size",
+          "description": "Raise the UI font-size maximum to a configurable value.",
+          "settingPath": "tweaks.appearance.uiFontSize.enabled"
+        },
+        {
+          "id": "custom-font-input",
+          "title": "Custom font input",
+          "description": "Switch between installed fonts and a manually entered CSS font-family stack.",
+          "settingPath": "tweaks.appearance.customFontInput.enabled",
+          "nullishFallback": true
+        },
+        {
+          "id": "suggested-prompts",
+          "title": "Suggested prompts",
+          "description": "Expose Suggested Prompts in settings and enable project-aware cards on Home.",
+          "settingPath": "tweaks.home.suggestedPrompts.enabled"
+        },
+        {
+          "id": "model-list",
+          "title": "Expanded model picker",
+          "description": "Open the advanced picker by default and show models inline with their supported reasoning efforts.",
+          "settingPath": "tweaks.modelPicker.showModelsByDefault.enabled",
+          "enabledWhen": "not-false"
+        },
+        {
+          "id": "english-effort-labels",
+          "title": "English reasoning effort labels",
+          "description": "Keep reasoning effort names in English in the Simplified Chinese interface.",
+          "settingPath": "tweaks.reasoning.keepEffortLabelsEnglish.enabled",
+          "enabledWhen": "not-false"
+        },
+        {
+          "id": "selection-more-details",
+          "title": "Selection: More details",
+          "description": "Restore the selected-text More details action that asks Quick Chat to explain the selection.",
+          "settingPath": "tweaks.selection.moreDetails.enabled",
+          "nullishFallback": true
+        },
+        {
+          "id": "annotation-submit",
+          "title": "Annotation submit shortcut",
+          "description": "Send the active selected-text annotation with Ctrl+Enter without the regular composer intercepting it.",
+          "settingPath": "tweaks.selection.annotationSubmit.enabled",
+          "nullishFallback": true
+        },
+        {
+          "id": "sidebar-project-name",
+          "title": "Sidebar project names",
+          "description": "Apply a configurable style to project names in the sidebar.",
+          "settingPath": "tweaks.sidebar.projectName.enabled",
+          "enabledWhen": "not-false"
         }
       ],
       "tweaks": {
@@ -763,6 +929,9 @@
           }
         },
         "selection": {
+          "annotationSubmit": {
+            "enabled": false
+          },
           "moreDetails": {
             "enabled": false
           }
@@ -773,6 +942,16 @@
             "style": "font-weight: 700 !important;"
           }
         }
+      }
+    },
+    {
+      "id": "wayland-global-shortcuts",
+      "title": "Wayland Global Shortcuts",
+      "description": "Use native Wayland portals for built-in popout, Mini/Pet, Appshots, voice and meeting shortcuts.",
+      "defaultEnabled": false,
+      "entrypoints": {
+        "patchDescriptors": "./patch.js",
+        "stageHook": "./stage.sh"
       }
     }
   ]

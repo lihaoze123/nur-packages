@@ -154,6 +154,7 @@ def sync_computer(info):
     copy(desktop / "nix/upstream-linux-packages.json", "pkgs/codex-desktop/upstream-linux-packages.json")
     for original, target in [("Cargo.lock", "Cargo.lock"),
                              ("global-dictation-linux/Cargo.lock", "global-dictation-Cargo.lock"),
+                             ("linux-features/pet-overlay/kwin-helper/Cargo.lock", "pet-kwin-Cargo.lock"),
                              ("linux-features/mcp-helper-reaper/reaper/Cargo.lock", "mcp-reaper-Cargo.lock"),
                              ("nix/watchbound-Cargo.lock", "watchbound-Cargo.lock"),
                              ("linux-features/directory-only-working-tree-watch/watchbound-artifacts.json", "watchbound-artifacts.json")]:
@@ -183,8 +184,10 @@ def sync_computer(info):
 '';
 ''')
     text = text.replace("src = ./global-dictation-linux;", 'src = "${sourceRoot}/global-dictation-linux";')
+    text = text.replace("src = ./linux-features/pet-overlay/kwin-helper;", 'src = "${sourceRoot}/linux-features/pet-overlay/kwin-helper";')
     text = text.replace("src = ./linux-features/mcp-helper-reaper/reaper;", 'src = "${sourceRoot}/linux-features/mcp-helper-reaper/reaper";')
     text = text.replace("./global-dictation-linux/Cargo.lock", "./global-dictation-Cargo.lock")
+    text = text.replace("./linux-features/pet-overlay/kwin-helper/Cargo.lock", "./pet-kwin-Cargo.lock")
     text = text.replace("./linux-features/mcp-helper-reaper/reaper/Cargo.lock", "./mcp-reaper-Cargo.lock")
     text = text.replace("./linux-features/directory-only-working-tree-watch/watchbound-artifacts.json", "./watchbound-artifacts.json")
     text = text.replace("./nix/watchbound-Cargo.lock", "./watchbound-Cargo.lock")
