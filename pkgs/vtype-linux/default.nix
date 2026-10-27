@@ -1,4 +1,4 @@
-{ lib, stdenv, fetchurl, cmake, fcitx5, pkgsStatic, python3, unzip, patchelf, zlib, openssl, snappy, writeShellScript, e2fsprogs, curl, fetchFromGitHub, applyPatches, callPackage }:
+{ lib, stdenv, fetchurl, cmake, fcitx5, pkgsStatic, python3, unzip, patchelf, zlib, openssl, snappy, writeShellScript, e2fsprogs, curl, fetchFromGitHub, applyPatches, callPackage, gtk3, gobject-introspection, wrapGAppsHook3 }:
 
 let
   # 跟随上游正式合入的 Nix 支持；仅保留云候选短暂等待身份锁的补丁。
@@ -14,7 +14,7 @@ let
     src = upstreamSrc;
     patches = [ ./cloud-latency.patch ];
   };
-  python = python3.withPackages (ps: [ ps.cryptography ps.python-snappy ]);
+  python = python3.withPackages (ps: [ ps.cryptography ps.python-snappy ps.pygobject3 ]);
   cloudPython = writeShellScript "wetype-cloud-python" ''
     export PATH="${lib.makeBinPath [ openssl wxc ]}:$PATH"
     export WETYPE_WXC="''${WETYPE_WXC:-${wxc}/bin/wxc}"
@@ -85,9 +85,11 @@ stdenv.mkDerivation {
   pname = "vtype-linux";
   inherit version src;
 
-  nativeBuildInputs = [ cmake ];
+  nativeBuildInputs = [ cmake gobject-introspection wrapGAppsHook3 ];
   nativeCheckInputs = [ python ];
-  buildInputs = [ fcitx5 ];
+  buildInputs = [ fcitx5 gtk3 ];
+  # Keep the ARM64 harness as an ELF file for QEMU; wrap only Python launchers.
+  dontWrapGApps = true;
   cmakeDir = "../fcitx5-wetype";
   cmakeFlags = [ "-DWETYPE_PYTHON_EXECUTABLE=${placeholder "out"}/libexec/wetype-python" ];
   doCheck = true;
@@ -171,11 +173,19 @@ stdenv.mkDerivation {
     EOF
   '';
 
+  postFixup = ''
+    for program in "$out/libexec/wetype-python" "$out/bin/"wetype-{cloud,setup,check}; do
+      wrapProgram "$program" "''${gappsWrapperArgs[@]}"
+    done
+  '';
+
   doInstallCheck = true;
   installCheckPhase = ''
     runHook preInstallCheck
     ${cloudPython} ../nix/check-wxc.py --package "$out" --wxc ${wxc}/bin/wxc
     ${cloudPython} ../nix/check-runtime.py --package "$out"
+    env -u GI_TYPELIB_PATH "$out/libexec/wetype-python" -c \
+      'import gi; gi.require_version("Gtk", "3.0"); gi.require_version("GdkPixbuf", "2.0"); from gi.repository import Gtk, GdkPixbuf'
     runHook postInstallCheck
   '';
 
