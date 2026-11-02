@@ -2,10 +2,10 @@
 
 let
   pname = "dbx";
-  version = "0.6.55";
+  version = "0.6.62";
   src = fetchurl {
     url = "https://github.com/t8y2/dbx/releases/download/v${version}/DBX_${version}_amd64.AppImage";
-    hash = "sha256-teM8cxGwuvHiQIqFf/et1fXstC17R8Rxleg3YSnw1eI=";
+    hash = "sha256-4S0xNAW6WuOdT1L/q2Ms5lhD2Pn9FZha4MkHkxcSycc=";
   };
   contents = appimageTools.extract { inherit pname version src; };
 in
