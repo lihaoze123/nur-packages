@@ -16,12 +16,12 @@ let
 in
 (buildNpmPackage.override { inherit nodejs; }) rec {
   pname = "cloudflare-cli";
-  version = "1.0.0-beta.32";
+  version = "1.0.0-rc.2";
 
   # Use the published bundle, matching `npm install -g cf`.
   src = fetchurl {
     url = "https://registry.npmjs.org/cf/-/cf-${version}.tgz";
-    hash = "sha256-/BqaiBv/pCN9Q/+DHnnJfBZFlXTHXs7gcycufP+2xck=";
+    hash = "sha256-c4OCQdD2M84FVifHJXG5P6ENjl/DBGtyxw8W3nknzfk=";
   };
   sourceRoot = "package";
 
@@ -35,7 +35,7 @@ in
     '
     cp ${./package-lock.json} package-lock.json
   '';
-  npmDepsHash = "sha256-CLWGOwQHdLVq+tcW6PXcvwGW3kh4RwdsMaFj2SDQtiI=";
+  npmDepsHash = "sha256-eMzNMr6mSmzX2Th6rdj429issZj6CLlTVC5p4N8Ouoc=";
   dontNpmBuild = true;
   npmFlags = [ "--ignore-scripts" ];
 
